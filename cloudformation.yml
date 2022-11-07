@@ -1,0 +1,121 @@
+
+# Cloud formation for creating AWS VPC, 2 public SN 4 Private SN, IGW, EIP, NAT Aand Route tables. 
+ #Author: fongoro     
+  
+    Resources:
+      ## VPC
+      PubPrivateVPC:
+        Type: AWS::EC2::VPC
+        Properties:
+          CidrBlock: 10.0.0.0/16
+
+      ## SUBNETS     
+      PublicSubnet1:
+        Type: AWS::EC2::Subnet
+        Properties:
+          VpcId: 
+            Ref: PubPrivateVPC
+          AvailabilityZone: us-east-2a
+          CidrBlock: 10.0.1.0/24
+          MapPublicIpOnLaunch: true
+      PublicSubnet2:
+        Type: AWS::EC2::Subnet
+        Properties:
+          VpcId: 
+            Ref: PubPrivateVPC
+          AvailabilityZone: us-east-2b
+          CidrBlock: 10.0.2.0/24
+          MapPublicIpOnLaunch: true
+     
+      PrivateSubnet1:
+        Type: AWS::EC2::Subnet
+        Properties:
+          VpcId: 
+            Ref: PubPrivateVPC
+          AvailabilityZone: us-east-2a
+          CidrBlock: 10.0.3.0/24
+          MapPublicIpOnLaunch: false
+     
+      PrivateSubnet2:
+        Type: AWS::EC2::Subnet
+        Properties:
+          VpcId: 
+            Ref: PubPrivateVPC
+          AvailabilityZone: us-east-2b
+          CidrBlock: 10.0.4.0/24
+          MapPublicIpOnLaunch: false
+      
+      PrivateSubnetDB1:
+        Type: AWS::EC2::Subnet
+        Properties:
+          VpcId: 
+            Ref: PubPrivateVPC
+          AvailabilityZone: us-east-2a
+          CidrBlock: 10.0.5.0/24
+          MapPublicIpOnLaunch: false
+        
+      PrivateSubnetDB2:
+        Type: AWS::EC2::Subnet
+        Properties:
+          VpcId: 
+            Ref: PubPrivateVPC
+          AvailabilityZone: us-east-2b
+          CidrBlock: 10.0.6.0/24
+          MapPublicIpOnLaunch: false
+     
+     ## INTERNET GATEWAY
+      InternetGateway:
+        Type: AWS::EC2::InternetGateway
+      
+      GatewayToInternet:
+        Type: AWS::EC2::VPCGatewayAttachment
+        Properties:
+          VpcId: 
+            Ref: PubPrivateVPC
+          InternetGatewayId: 
+            Ref: InternetGateway
+      
+      ## PUBLIC ROUTING
+      PublicRouteTable:
+        Type: AWS::EC2::RouteTable
+        Properties:
+          VpcId: 
+            Ref: PubPrivateVPC
+      
+      PublicRoute:
+        Type: AWS::EC2::Route
+        DependsOn: GatewayToInternet
+        Properties:
+          RouteTableId: 
+            Ref: PublicRouteTable
+          DestinationCidrBlock: 0.0.0.0/0
+          GatewayId: 
+            Ref: InternetGateway
+     
+      PublicSubnet1RouteTableAssociation:
+        Type: AWS::EC2::SubnetRouteTableAssociation
+        Properties:
+          SubnetId: 
+            Ref: PublicSubnet1
+          RouteTableId: 
+            Ref: PublicRouteTable
+     
+      PublicSubnet2RouteTableAssociation:
+        Type: AWS::EC2::SubnetRouteTableAssociation
+        Properties:
+          SubnetId: 
+            Ref: PublicSubnet2
+          RouteTableId: 
+            Ref: PublicRouteTable
+     
+      NatGateway1EIP:
+        Type: AWS::EC2::EIP
+        DependsOn: GatewayToInternet
+        Properties: 
+            Domain: vpc
+
+      NatGateway1: 
+        Type: AWS::EC2::NatGateway
+        Properties: 
+            AllocationId: !GetAtt NatGateway1EIP.AllocationId
+            SubnetId: !Ref PublicSubnet1
